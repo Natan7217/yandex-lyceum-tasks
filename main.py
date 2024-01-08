@@ -1,63 +1,64 @@
 import sys
-import random
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton
-from PyQt5.QtGui import QPainter, QColor
-from PyQt5.QtCore import Qt, QRectF
+import sqlite3
+from PyQt5.QtWidgets import QApplication, QMainWindow, QTableWidgetItem
+from PyQt5.uic import loadUi
+
+conn = sqlite3.connect("coffee.sqlite")
+cursor = conn.cursor()
+
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS coffee (
+        id INTEGER PRIMARY KEY,
+        sort_name TEXT,
+        roast_degree TEXT,
+        ground_or_whole TEXT,
+        taste_description TEXT,
+        price REAL,
+        package_volume REAL
+    )
+''')
+
+cursor.execute('''
+    INSERT INTO coffee (sort_name, roast_degree, ground_or_whole, taste_description, price, package_volume)
+    VALUES (?, ?, ?, ?, ?, ?)
+''', ("Арабика", "Средняя", "В зерна", "Фруктово-цветочный", 399.99, 250))
+
+conn.commit()
+conn.close()
 
 
-class CirclePainter(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.circles = []
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-
-        for circle in self.circles:
-            x, y, diameter, color = circle
-            painter.setBrush(QColor(*color))
-            painter.drawEllipse(x, y, diameter, diameter)
-
-    def add_circle(self, x, y, diameter, color):
-        self.circles.append((x, y, diameter, color))
-        self.update()
-
-
-class MainWindow(QMainWindow):
+class CoffeeApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        loadUi("main.ui", self)
+        self.setWindowTitle("Coffee Information")
 
-        self.setWindowTitle("Random Circles")
-        self.setGeometry(100, 100, 600, 400)
+        self.connection = sqlite3.connect("coffee.sqlite")
+        self.cursor = self.connection.cursor()
 
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        self.layout = QVBoxLayout()
-        self.central_widget.setLayout(self.layout)
+        self.display_coffee_info()
 
-        self.circle_painter = CirclePainter()
-        self.layout.addWidget(self.circle_painter)
+    def display_coffee_info(self):
+        query = "SELECT * FROM coffee"
+        self.cursor.execute(query)
+        coffee_data = self.cursor.fetchall()
 
-        self.button = QPushButton("Draw Circle")
-        self.layout.addWidget(self.button)
-
-        self.button.clicked.connect(self.draw_circle)
-
-    def draw_circle(self):
-        diameter = random.randint(20, 100)
-        x = random.randint(0, self.circle_painter.width() - diameter)
-        y = random.randint(0, self.circle_painter.height() - diameter)
-        color = (
-            random.randint(0, 255),
-            random.randint(0, 255),
-            random.randint(0, 255),
+        self.tableWidget.setColumnCount(7)
+        self.tableWidget.setHorizontalHeaderLabels(
+            ["ID", "Название сорта", "Степень обжарки", "Молотый/в зернах", "Описание вкуса", "Цена", "Объем упаковки"]
         )
-        self.circle_painter.add_circle(x, y, diameter, color)
+
+        self.tableWidget.setRowCount(len(coffee_data))
+
+        for row_num, row_data in enumerate(coffee_data):
+            for col_num, col_data in enumerate(row_data):
+                self.tableWidget.setItem(row_num, col_num, QTableWidgetItem(str(col_data)))
+
+        self.connection.close()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    mainWindow = MainWindow()
-    mainWindow.show()
+    window = CoffeeApp()
+    window.show()
     sys.exit(app.exec_())
