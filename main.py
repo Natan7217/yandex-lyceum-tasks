@@ -2,8 +2,7 @@ import sys
 import random
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QPushButton
 from PyQt5.QtGui import QPainter, QColor
-from PyQt5.QtCore import Qt
-from PyQt5.uic import loadUi
+from PyQt5.QtCore import Qt, QRectF
 
 
 class CirclePainter(QWidget):
@@ -16,12 +15,12 @@ class CirclePainter(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
 
         for circle in self.circles:
-            color = QColor(Qt.yellow)
-            painter.setBrush(color)
-            painter.drawEllipse(*circle)
+            x, y, diameter, color = circle
+            painter.setBrush(QColor(*color))
+            painter.drawEllipse(x, y, diameter, diameter)
 
-    def add_circle(self, x, y, diameter):
-        self.circles.append((x, y, diameter, diameter))
+    def add_circle(self, x, y, diameter, color):
+        self.circles.append((x, y, diameter, color))
         self.update()
 
 
@@ -29,17 +28,32 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.ui = loadUi("UI.ui", self)
-        self.circle_painter = CirclePainter(self.ui.centralwidget)
-        self.ui.verticalLayout.addWidget(self.circle_painter)
+        self.setWindowTitle("Random Circles")
+        self.setGeometry(100, 100, 600, 400)
 
-        self.ui.pushButton.clicked.connect(self.draw_circle)
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.layout = QVBoxLayout()
+        self.central_widget.setLayout(self.layout)
+
+        self.circle_painter = CirclePainter()
+        self.layout.addWidget(self.circle_painter)
+
+        self.button = QPushButton("Draw Circle")
+        self.layout.addWidget(self.button)
+
+        self.button.clicked.connect(self.draw_circle)
 
     def draw_circle(self):
         diameter = random.randint(20, 100)
         x = random.randint(0, self.circle_painter.width() - diameter)
         y = random.randint(0, self.circle_painter.height() - diameter)
-        self.circle_painter.add_circle(x, y, diameter)
+        color = (
+            random.randint(0, 255),
+            random.randint(0, 255),
+            random.randint(0, 255),
+        )
+        self.circle_painter.add_circle(x, y, diameter, color)
 
 
 if __name__ == "__main__":
